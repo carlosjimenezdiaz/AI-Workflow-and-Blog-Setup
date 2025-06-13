@@ -2,9 +2,9 @@
 
 # =============== CONFIGURATION ===============
 # CHANGE THESE VALUES!
-DOMAIN_NAME="carlosjimenezdiaz.com"
+DOMAIN_NAME="yourdomain.com"
 SUBDOMAIN="n8n"
-SSL_EMAIL="cjimenez.diaz@gmail.com"
+SSL_EMAIL="youremail@gmail.com"
 TIMEZONE="America/New_York"
 
 # =============== SYSTEM SETUP ===============
