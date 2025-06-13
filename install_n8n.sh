@@ -1,10 +1,17 @@
 #!/bin/bash
 
 # =============== CONFIGURATION ===============
-DOMAIN_NAME="yourdomain.com"
-SUBDOMAIN="n8n"
-SSL_EMAIL="youremail@gmail.com"
-TIMEZONE="America/New_York"
+echo "▶ Enter your domain name (e.g., yourdomain.com):"
+read -r DOMAIN_NAME
+
+echo "▶ Enter the subdomain to use for n8n (e.g., n8n):"
+read -r SUBDOMAIN
+
+echo "▶ Enter your email address for SSL certificate registration (e.g., youremail@gmail.com):"
+read -r SSL_EMAIL
+
+echo "▶ Enter your timezone (e.g., America/New_York):"
+read -r TIMEZONE
 
 # =============== SYSTEM SETUP ===============
 echo "▶ Updating system packages..."
