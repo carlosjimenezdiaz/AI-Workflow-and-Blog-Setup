@@ -32,7 +32,7 @@ Before running the script, ensure you have:
 Use your cloud provider’s console or terminal:
 
 ### 1. Download the Script
-- curl -O https://raw.githubusercontent.com/yourusername/your-repo/main/install_n8n.sh
+- curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
 - chmod +x install_n8n.sh
 
 ### 2. Run the Script
