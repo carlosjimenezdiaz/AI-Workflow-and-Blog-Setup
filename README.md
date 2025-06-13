@@ -35,7 +35,16 @@ Use your cloud provider’s console or terminal:
 - curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
 - chmod +x install_n8n.sh
 
-### 2. Run the Script
+### 2. Run the script
+- nano install_n8n.sh
+- 
+### 3. Change these credentials
+- DOMAIN_NAME="yourdomain.com"
+- SUBDOMAIN="n8n"
+- SSL_EMAIL="you@yourdomain.com"
+- TIMEZONE="Europe/London"
+
+### 4. Run the Script
 - ./install_n8n.sh
 
 ---
