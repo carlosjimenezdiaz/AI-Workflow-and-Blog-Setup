@@ -9,7 +9,7 @@ This project provides a **plug-and-play script** to self-host [n8n](https://n8n.
 - One-click shell script (`install_n8n.sh`)
 - Docker Compose setup for n8n + Traefik reverse proxy
 - Free SSL certificates via Let's Encrypt
-- Persistent storage for workflows and files
+- Persistent storage for workflows and files (in VM via volume and in a PostgreSQL DB).
 - Support for custom domain (e.g., `n8n.yourdomain.com`)
 - Access to paid n8n features via Fair Code license
 
