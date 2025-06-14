@@ -29,14 +29,10 @@ Before running the script, ensure you have:
 
 ## 🚀 Quick Start Guide
 
-Use your cloud provider’s console or terminal:
-
-### 1. Download the Script
-- curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
-- chmod +x install_n8n.sh
-
-### 3. Run the Script
-- ./install_n8n.sh
+- Step 1: Use your cloud provider’s console or terminal to login into your VM
+- Step 2: run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
+- Step 3: run the following command: chmod +x install_n8n.sh
+- Step 4: run the following command: ./install_n8n.sh
 
 ---
 
@@ -47,7 +43,7 @@ Use your cloud provider’s console or terminal:
 - sudo docker compose up -d
 
 ### 🔧 Troubleshooting SSL Issues
-If HTTPS fails (e.g., certificate wasn’t issued properly):
+If HTTPS fails (e.g., the certificate wasn’t issued properly):
 - cd ~/n8n-compose
 - sudo docker compose down
 - sudo rm -rf ./letsencrypt/acme.json
@@ -75,4 +71,4 @@ Recommended: Daily snapshot schedule for quick recovery from configuration error
 This project is released under the MIT License.
 
 ### 🙌 Credits
-Created by Carlos Jimenez — feel free to fork, star ⭐, and share!
+Created by Carlos Jimenez — feel free to fork, star ⭐, and share! If you have any questions, send me an email to cjimenez.diaz@gmail.com (happy to help)
