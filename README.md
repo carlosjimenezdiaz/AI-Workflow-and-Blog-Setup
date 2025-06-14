@@ -29,10 +29,10 @@ Before running the script, ensure you have:
 
 ## 🚀 Quick Start Guide
 
-- Step 1: Use your cloud provider’s console or terminal to login into your VM
-- Step 2: run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
-- Step 3: run the following command: chmod +x install_n8n.sh
-- Step 4: run the following command: ./install_n8n.sh
+- **Step 1**. Use your cloud provider’s console or terminal to login to your VM
+- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
+- **Step 3**. Run the following command: chmod +x install_n8n.sh
+- **Step 4**. Run the following command: ./install_n8n.sh
 
 ---
 
