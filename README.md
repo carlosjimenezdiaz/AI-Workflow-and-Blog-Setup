@@ -1,52 +1,44 @@
-# 🚀 Self-Host n8n with Docker Compose + Traefik
-
-This project provides a **plug-and-play script** to self-host [n8n](https://n8n.io) — the powerful workflow automation tool — on **any Linux cloud VM**, with full HTTPS support and no usage limits. Whether you’re using AWS, DigitalOcean, Google Cloud, or Oracle Cloud, this setup gives you complete control, privacy, and flexibility.
+# 🚀 Self-Host n8n + Ghost with Docker Compose + Traefik
+This project provides a **plug-and-play script** to self-host [n8n](https://n8n.io) (workflow automation) and [Ghost](https://ghost.org) (professional blogging platform) on **any Linux cloud VM**, with full HTTPS support, no usage limits, and a unified PostgreSQL backend. Whether you're running on AWS, DigitalOcean, Google Cloud, or Oracle Cloud, this setup gives you complete control, privacy, and extendability — perfect for automation pros, bloggers, and indie devs.
 
 ---
 
 ## 📦 What's Included
-
-- One-click shell script (`install_n8n.sh`)
-- Docker Compose setup for n8n + Traefik reverse proxy
-- Free SSL certificates via Let's Encrypt
-- Persistent storage for workflows and files (in VM via volume and in a PostgreSQL DB).
-- Support for custom domain (e.g., `n8n.yourdomain.com`)
-- Access to paid n8n features via Fair Code license
+- 🧩 One-click shell script: `deploy-stack.sh`
+- 🐳 Docker Compose setup with:
+  - [n8n](https://n8n.io) – workflow automation
+  - [Ghost](https://ghost.org) – blogging CMS
+  - PostgreSQL – shared database engine (with separate DBs for each service)
+  - Traefik – reverse proxy with automatic HTTPS
+- 🔒 Free SSL certificates via Let's Encrypt
+- 💾 Persistent volumes for workflows and Ghost content
+- 🌍 Full domain or subdomain support for each app
 
 ---
 
 ## 🖥 Requirements
+Before running the script, make sure you have:
 
-Before running the script, ensure you have:
-
-- A cloud VM with **Ubuntu 22.04 LTS** or compatible
-- Root or `sudo` access to the VM
-- A registered **domain or subdomain**
-- DNS **A record** pointing to your VM's **public IP**
-- Ports **80** and **443** open in the firewall/security group
+- ✅ A cloud VM with **Ubuntu 22.04 LTS** or compatible
+- ✅ `sudo` or root access to the VM
+- ✅ A registered **domain or subdomain** for each service
+- ✅ DNS **A record(s)** pointing to your VM's **public IP**
+- ✅ Open ports: **80** and **443**
 
 ---
 
 ## 🚀 Quick Start Guide
-
 - **Step 1**. Use your cloud provider’s console or terminal to login to your VM
-- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/install_n8n.sh
-- **Step 3**. Run the following command: chmod +x install_n8n.sh
-- **Step 4**. Run the following command: ./install_n8n.sh
+- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/deploy-stack.sh
+- **Step 3**. Run the following command: chmod +x deploy-stack.sh
+- **Step 4**. Run the following command: ./deploy-stack.sh
 
 ---
 
-### 🛠 Updating Your n8n Instance
+### 🛠 Updating Services (n8n / Ghost / Traefik)
 - cd ~/n8n-compose
 - sudo docker compose pull
 - sudo docker compose down
-- sudo docker compose up -d
-
-### 🔧 Troubleshooting SSL Issues
-If HTTPS fails (e.g., the certificate wasn’t issued properly):
-- cd ~/n8n-compose
-- sudo docker compose down
-- sudo rm -rf ./letsencrypt/acme.json
 - sudo docker compose up -d
 
 ### 💾 Optional: Setup Scheduled Backups
