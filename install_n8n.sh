@@ -82,8 +82,6 @@ EOF
 
 echo "▶ Creando docker-compose.yml..."
 cat <<EOF > docker-compose.yml
-version: "3.8"
-
 services:
   postgres:
     image: postgres:15
