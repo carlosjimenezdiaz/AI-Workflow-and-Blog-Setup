@@ -13,6 +13,16 @@ read -r SSL_EMAIL
 echo "▶ Enter your timezone (e.g., America/New_York):"
 read -r TIMEZONE
 
+echo "▶ Enter your PostgreSQL database name:"
+read -r DB_NAME
+
+echo "▶ Enter your PostgreSQL username:"
+read -r DB_USER
+
+echo "▶ Enter your PostgreSQL password:"
+read -rs DB_PASSWORD
+echo ""
+
 # =============== SYSTEM SETUP ===============
 echo "▶ Updating system packages..."
 sudo apt-get update && sudo apt-get upgrade -y
@@ -52,6 +62,9 @@ DOMAIN_NAME=${DOMAIN_NAME}
 SUBDOMAIN=${SUBDOMAIN}
 GENERIC_TIMEZONE=${TIMEZONE}
 SSL_EMAIL=${SSL_EMAIL}
+DB_NAME=${DB_NAME}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
 EOF
 
 echo "▶ Creating docker-compose.yml..."
@@ -63,9 +76,11 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: n8n
-      POSTGRES_PASSWORD: n8npass
-      POSTGRES_DB: n8n_db
+      POSTGRES_USER: \${DB_USER}
+      POSTGRES_PASSWORD: \${DB_PASSWORD}
+      POSTGRES_DB: \${DB_NAME}
+    ports:
+      - 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -99,9 +114,9 @@ services:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=n8n_db
-      - DB_POSTGRESDB_USER=n8n
-      - DB_POSTGRESDB_PASSWORD=n8npass
+      - DB_POSTGRESDB_DATABASE=\${DB_NAME}
+      - DB_POSTGRESDB_USER=\${DB_USER}
+      - DB_POSTGRESDB_PASSWORD=\${DB_PASSWORD}
       - N8N_HOST=\${SUBDOMAIN}.\${DOMAIN_NAME}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
