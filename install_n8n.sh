@@ -1,37 +1,34 @@
 #!/bin/bash
 
-# =============== CONFIGURATION ===============
-echo "▶ Enter your domain name (e.g., yourdomain.com):"
+# =============== CONFIGURACIÓN INTERACTIVA ===============
+echo "▶ Dominio principal (ej: tu-dominio.com):"
 read -r DOMAIN_NAME
 
-echo "▶ Enter the subdomain to use for n8n (e.g., n8n):"
+echo "▶ Subdominio para n8n (ej: n8n):"
 read -r SUBDOMAIN
 
-echo "▶ Enter your email address for SSL certificate registration (e.g., youremail@gmail.com):"
+echo "▶ Email para el certificado SSL:"
 read -r SSL_EMAIL
 
-echo "▶ Enter your timezone (e.g., America/New_York):"
+echo "▶ Zona horaria (ej: America/New_York):"
 read -r TIMEZONE
 
-echo "▶ Enter your PostgreSQL database name:"
+echo "▶ Nombre de la base de datos (ej: master_db):"
 read -r DB_NAME
 
-echo "▶ Enter your PostgreSQL username:"
+echo "▶ Usuario de la base de datos (ej: cjimenezdiaz):"
 read -r DB_USER
 
-echo "▶ Enter your PostgreSQL password:"
+echo "▶ Contraseña de la base de datos:"
 read -rs DB_PASSWORD
 echo ""
 
-# =============== SYSTEM SETUP ===============
-echo "▶ Updating system packages..."
+# =============== PREPARACIÓN DEL SISTEMA ===============
+echo "▶ Actualizando paquetes del sistema..."
 sudo apt-get update && sudo apt-get upgrade -y
 
-echo "▶ Installing dependencies..."
-sudo apt-get install -y ca-certificates curl gnupg lsb-release nano
-
-# =============== DOCKER INSTALL ===============
-echo "▶ Setting up Docker repository..."
+# =============== INSTALACIÓN DE DOCKER Y DOCKER COMPOSE PLUGIN V2 ===============
+echo "▶ Configurando repositorio oficial de Docker..."
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
   sudo tee /etc/apt/keyrings/docker.asc > /dev/null
@@ -41,22 +38,38 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-echo "▶ Installing Docker & Docker Compose plugin..."
+echo "▶ Instalando Docker + Docker Compose V2..."
 sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-echo "▶ Docker versions installed:"
-docker --version
-docker compose version
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 ; do
+  echo "⚠️ Esperando a que se libere el bloqueo de APT..."
+  sleep 3
+done
 
-# =============== N8N SETUP ===============
-echo "▶ Creating n8n directory structure..."
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "❌ Docker no se instaló correctamente. Abortando."
+  exit 1
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "❌ Docker Compose plugin no se instaló correctamente. Abortando."
+  exit 1
+fi
+
+echo "✅ Docker: $(docker --version)"
+echo "✅ Docker Compose: $(docker compose version)"
+
+# =============== CONFIGURACIÓN DE N8N ===============
+echo "▶ Estructura de carpetas para n8n..."
 mkdir -p ~/n8n-compose/local-files
 mkdir -p ~/n8n-compose/letsencrypt
-chmod 600 ~/n8n-compose/letsencrypt/acme.json 2>/dev/null || touch ~/n8n-compose/letsencrypt/acme.json && chmod 600 ~/n8n-compose/letsencrypt/acme.json
+touch ~/n8n-compose/letsencrypt/acme.json
+chmod 600 ~/n8n-compose/letsencrypt/acme.json
 cd ~/n8n-compose || exit 1
 
-echo "▶ Creating .env file..."
+echo "▶ Creando archivo .env..."
 cat <<EOF > .env
 DOMAIN_NAME=${DOMAIN_NAME}
 SUBDOMAIN=${SUBDOMAIN}
@@ -67,7 +80,7 @@ DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 EOF
 
-echo "▶ Creating docker-compose.yml..."
+echo "▶ Creando docker-compose.yml..."
 cat <<EOF > docker-compose.yml
 version: "3.8"
 
@@ -139,11 +152,11 @@ volumes:
   postgres_data:
 EOF
 
-# =============== LAUNCH ===============
-echo "▶ Launching n8n with Docker Compose..."
+# =============== DESPLIEGUE FINAL ===============
+echo "▶ Levantando contenedores con Docker Compose..."
 sudo docker compose up -d
 
 echo ""
-echo "✅ n8n is now running!"
-echo "🌐 Visit: https://${SUBDOMAIN}.${DOMAIN_NAME}"
-echo "📥 Create your owner account and activate the free Fair Code license."
+echo "✅ n8n está corriendo con éxito."
+echo "🌐 Abre: https://${SUBDOMAIN}.${DOMAIN_NAME}"
+echo "🧠 Crea tu cuenta de administrador y activa la licencia Fair Code."
