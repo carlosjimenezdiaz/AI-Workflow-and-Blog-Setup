@@ -1,25 +1,25 @@
 #!/bin/bash
 
 # =============== CONFIGURACIÓN INTERACTIVA ===============
-echo "▶ Dominio principal (ej: tu-dominio.com):"
+echo "▶ Principal Domain (ej: tu-dominio.com):"
 read -r DOMAIN_NAME
 
-echo "▶ Subdominio para n8n (ej: n8n):"
+echo "▶ Sub-Domain for n8n (ej: n8n):"
 read -r SUBDOMAIN
 
-echo "▶ Email para el certificado SSL:"
+echo "▶ Email for the SSL certificate:"
 read -r SSL_EMAIL
 
-echo "▶ Zona horaria (ej: America/New_York):"
+echo "▶ Time Zone (like: America/New_York):"
 read -r TIMEZONE
 
-echo "▶ Nombre de la base de datos (ej: master_db):"
+echo "▶ DB Name:"
 read -r DB_NAME
 
-echo "▶ Usuario de la base de datos (ej: cjimenezdiaz):"
+echo "▶ Username for the DB:"
 read -r DB_USER
 
-echo "▶ Contraseña de la base de datos:"
+echo "▶ Password for the DB:"
 read -rs DB_PASSWORD
 echo ""
 
