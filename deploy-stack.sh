@@ -61,11 +61,13 @@ read -rs DB_ADMIN_PASSWORD
 echo ""
 
 # =============== CREACIÓN DE ESTRUCTURA ===============
-mkdir -p ~/docker-stack/{n8n/local-files,ghost,letsencrypt}
-touch ~/docker-stack/letsencrypt/acme.json
-chmod 600 ~/docker-stack/letsencrypt/acme.json
-cd ~/docker-stack || exit 1
+BASE_DIR=~/docker-stack
+mkdir -p "$BASE_DIR"/{n8n,ghost,letsencrypt}
+touch "$BASE_DIR/letsencrypt/acme.json"
+chmod 600 "$BASE_DIR/letsencrypt/acme.json"
+cd "$BASE_DIR" || exit 1
 
+# =============== ENV FILE =================
 echo "▶ Generando .env..."
 cat <<EOF > .env
 SSL_EMAIL=${SSL_EMAIL}
@@ -88,98 +90,131 @@ GHOST_DB_USER=${GHOST_DB_USER}
 GHOST_DB_PASSWORD=${GHOST_DB_PASSWORD}
 EOF
 
+# =============== DOCKERFILE GHOST =================
+echo "▶ Generando Dockerfile de Ghost personalizado..."
+cat <<EOF > ghost/Dockerfile
+FROM ghost:latest
+
+USER root
+RUN npm install knex pg --save
+USER node
+EOF
+
+# =============== DOCKER-COMPOSE =================
 echo "▶ Generando docker-compose.yml..."
 cat <<EOF > docker-compose.yml
 services:
-
   traefik:
-    image: traefik
+    image: traefik:latest
     restart: always
     command:
-      - --api.insecure=false
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.mytlschallenge.acme.tlschallenge=true
-      - --certificatesresolvers.mytlschallenge.acme.email=\${SSL_EMAIL}
-      - --certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --certificatesresolvers.myresolver.acme.httpchallenge=true
+      - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.myresolver.acme.email=\${SSL_EMAIL}
+      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
     ports:
       - 80:80
       - 443:443
     volumes:
-      - ./letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      - internal
 
   postgres:
-    image: postgres:15
+    image: postgres:latest
     restart: always
     environment:
       POSTGRES_USER: \${DB_ADMIN_USER}
       POSTGRES_PASSWORD: \${DB_ADMIN_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  mysql:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_DATABASE: \${GHOST_DB}
+      MYSQL_USER: \${GHOST_DB_USER}
+      MYSQL_PASSWORD: \${GHOST_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: \${DB_ADMIN_PASSWORD}
+    volumes:
+      - ghost_db_data:/var/lib/mysql
+    networks:
+      - internal
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n
+    image: n8nio/n8n
     restart: always
-    depends_on:
-      - postgres
     environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=\${N8N_DB}
-      - DB_POSTGRESDB_USER=\${N8N_DB_USER}
-      - DB_POSTGRESDB_PASSWORD=\${N8N_DB_PASSWORD}
-      - N8N_HOST=\${N8N_DOMAIN}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=https
-      - NODE_ENV=production
-      - WEBHOOK_URL=https://\${N8N_DOMAIN}/
-      - GENERIC_TIMEZONE=\${TIMEZONE}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: \${N8N_DB}
+      DB_POSTGRESDB_USER: \${N8N_DB_USER}
+      DB_POSTGRESDB_PASSWORD: \${N8N_DB_PASSWORD}
+      N8N_HOST: \${N8N_DOMAIN}
+      N8N_PORT: 5678
+      WEBHOOK_URL: https://\${N8N_DOMAIN}/
+      TZ: \${TIMEZONE}
     volumes:
-      - ./n8n/local-files:/files
       - n8n_data:/home/node/.n8n
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(\`\${N8N_DOMAIN}\`)
-      - traefik.http.routers.n8n.tls=true
-      - traefik.http.routers.n8n.entrypoints=websecure
-      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
-
-  ghost:
-    image: ghost:latest
-    restart: always
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(\`\${N8N_DOMAIN}\`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+    networks:
+      - internal
     depends_on:
       - postgres
+
+  ghost:
+    build:
+      context: ./ghost
+    restart: always
     environment:
-      database__client: postgres
-      database__connection__host: postgres
+      database__client: mysql
+      database__connection__host: mysql
       database__connection__user: \${GHOST_DB_USER}
       database__connection__password: \${GHOST_DB_PASSWORD}
       database__connection__database: \${GHOST_DB}
       url: https://\${GHOST_DOMAIN}
-      TZ: \${TIMEZONE}
     volumes:
       - ghost_content:/var/lib/ghost/content
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.ghost.rule=Host(\`\${GHOST_DOMAIN}\`)
-      - traefik.http.routers.ghost.tls=true
-      - traefik.http.routers.ghost.entrypoints=websecure
-      - traefik.http.routers.ghost.tls.certresolver=mytlschallenge
+      - "traefik.enable=true"
+      - "traefik.http.routers.ghost.rule=Host(\`\${GHOST_DOMAIN}\`)"
+      - "traefik.http.routers.ghost.entrypoints=websecure"
+      - "traefik.http.routers.ghost.tls.certresolver=myresolver"
+      - "traefik.http.services.ghost.loadbalancer.server.port=2368"
+    networks:
+      - internal
+    depends_on:
+      - mysql
+
+networks:
+  internal:
 
 volumes:
-  ghost_content:
-  n8n_data:
   postgres_data:
+  n8n_data:
+  ghost_db_data:
+  ghost_content:
+  letsencrypt:
 EOF
 
-echo "▶ Levantando la pila con Docker Compose..."
-sudo docker compose up -d
+# =============== DESPLIEGUE =================
+echo "▶ Levantando contenedores con Docker Compose..."
+docker compose up -d --build
 
 echo ""
-echo "✅ ¡Todo está corriendo con éxito!"
+echo "✅ ¡Despliegue completo!"
 echo "🌐 n8n:   https://${N8N_DOMAIN}"
 echo "🌐 Ghost: https://${GHOST_DOMAIN}"
