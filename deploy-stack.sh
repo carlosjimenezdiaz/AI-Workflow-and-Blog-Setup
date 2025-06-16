@@ -189,23 +189,25 @@ services:
     environment:
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
-      DB_POSTGRESDB_DATABASE: \${N8N_DB}
-      DB_POSTGRESDB_USER: \${N8N_DB_USER}
-      DB_POSTGRESDB_PASSWORD: \${N8N_DB_PASSWORD}
-      N8N_HOST: \${N8N_DOMAIN}
+      DB_POSTGRESDB_DATABASE: n8n_db
+      DB_POSTGRESDB_USER: cjimenezdiaz
+      DB_POSTGRESDB_PASSWORD: tu_contraseña_aquí
+      N8N_HOST: n8napp.carlosjimenezdiaz.com
       N8N_PORT: 5678
-      WEBHOOK_URL: https://\${N8N_DOMAIN}/
-      TZ: \${TIMEZONE}
+      WEBHOOK_URL: https://n8napp.carlosjimenezdiaz.com/
+      TZ: America/New_York
     volumes:
       - n8n_data:/home/node/.n8n
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(\`\${N8N_DOMAIN}\`)"
+      - "traefik.http.routers.n8n.rule=Host(`n8napp.carlosjimenezdiaz.com`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls.certresolver=myresolver"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-    networks: [internal]
-    depends_on: [postgres]
+    networks:
+      - internal
+    depends_on:
+      - postgres
 
   ghost:
     build:
