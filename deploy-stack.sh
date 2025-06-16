@@ -1,16 +1,55 @@
 #!/bin/bash
 
-# =============== INTERACTIVO ===============
+set -e
+
+echo "🔧 Actualizando el sistema Ubuntu..."
+sudo apt update && sudo apt upgrade -y
+
+# ====================== VERIFICACIÓN DE DOCKER ======================
+echo "🐳 Verificando Docker..."
+
+if ! command -v docker &> /dev/null; then
+  echo "⚙️ Instalando Docker..."
+  sudo apt install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+  sudo mkdir -p /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+  sudo apt update
+  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  sudo usermod -aG docker $USER
+  echo "✅ Docker instalado. Reinicia sesión y vuelve a ejecutar el script."
+  exit 0
+else
+  echo "✅ Docker ya está instalado."
+fi
+
+# ====================== DOCKER COMPOSE PLUGIN ======================
+echo "🔍 Verificando Docker Compose v2..."
+if ! docker compose version &> /dev/null; then
+  echo "⚙️ Instalando Docker Compose plugin..."
+  sudo apt install -y docker-compose-plugin
+else
+  echo "✅ Docker Compose plugin OK."
+fi
+
+# ===================== ENTRADA INTERACTIVA =====================
 echo "▶ Email para SSL Let's Encrypt:"
 read -r SSL_EMAIL
 
 echo "▶ Zona Horaria (ej: America/New_York):"
 read -r TIMEZONE
 
-# ========== n8n ==============
 echo "▶ ¿Quieres usar un subdominio para n8n? (s/n):"
 read -r USE_N8N_SUBDOMAIN
-
 if [[ "$USE_N8N_SUBDOMAIN" =~ ^[Ss]$ ]]; then
   echo "▶ Subdominio para n8n (ej: n8n):"
   read -r N8N_SUB
@@ -30,10 +69,8 @@ echo "▶ Contraseña del usuario de n8n:"
 read -rs N8N_DB_PASSWORD
 echo ""
 
-# ========== Ghost ==============
 echo "▶ ¿Quieres usar un subdominio para Ghost? (s/n):"
 read -r USE_GHOST_SUBDOMAIN
-
 if [[ "$USE_GHOST_SUBDOMAIN" =~ ^[Ss]$ ]]; then
   echo "▶ Subdominio para Ghost (ej: blog):"
   read -r GHOST_SUB
@@ -53,27 +90,24 @@ echo "▶ Contraseña del usuario de Ghost:"
 read -rs GHOST_DB_PASSWORD
 echo ""
 
-echo "▶ Clave de Admin API de Ghost (key_id:secret):"
+echo "▶ Clave de Admin API de Ghost (formato key_id:secret):"
 read -r GHOST_ADMIN_API_KEY
 echo ""
 
-# ========== PostgreSQL Admin ==========
-echo "▶ Usuario administrador para PostgreSQL (ej: admin):"
+echo "▶ Usuario administrador para PostgreSQL:"
 read -r DB_ADMIN_USER
 echo "▶ Contraseña del usuario administrador:"
 read -rs DB_ADMIN_PASSWORD
 echo ""
 
-# =============== CREACIÓN DE ESTRUCTURA ===============
+# ===================== CREACIÓN DE CARPETAS =====================
 BASE_DIR=~/docker-stack
-mkdir -p "$BASE_DIR"/{n8n,ghost,ghost-token-service,letsencrypt}
+mkdir -p "$BASE_DIR"/{n8n,ghost,ghost-token-service,letsencrypt,backups}
 touch "$BASE_DIR/letsencrypt/acme.json"
 chmod 600 "$BASE_DIR/letsencrypt/acme.json"
 cd "$BASE_DIR" || exit 1
 
-# =============== GHOST TOKEN SERVICE =================
-echo "▶ Generando servicio de generación de token JWT para Ghost..."
-
+# ===================== GENERAR GHOST TOKEN SERVICE =====================
 cat <<EOF > ghost-token-service/app.py
 import jwt
 import datetime
@@ -101,32 +135,23 @@ EOF
 
 cat <<EOF > ghost-token-service/Dockerfile
 FROM python:3.11-slim
-
 WORKDIR /app
 COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
-
 ENV FLASK_APP=app.py
 CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
 EOF
 
-# =============== ENV FILE =================
-echo "▶ Generando .env..."
+# ===================== ENV FILE =====================
 cat <<EOF > .env
 SSL_EMAIL=${SSL_EMAIL}
 TIMEZONE=${TIMEZONE}
-
-# PostgreSQL
 DB_ADMIN_USER=${DB_ADMIN_USER}
 DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD}
-
-# n8n
 N8N_DOMAIN=${N8N_DOMAIN}
 N8N_DB=${N8N_DB}
 N8N_DB_USER=${N8N_DB_USER}
 N8N_DB_PASSWORD=${N8N_DB_PASSWORD}
-
-# ghost
 GHOST_DOMAIN=${GHOST_DOMAIN}
 GHOST_DB=${GHOST_DB}
 GHOST_DB_USER=${GHOST_DB_USER}
@@ -134,18 +159,15 @@ GHOST_DB_PASSWORD=${GHOST_DB_PASSWORD}
 GHOST_ADMIN_API_KEY=${GHOST_ADMIN_API_KEY}
 EOF
 
-# =============== DOCKERFILE GHOST =================
-echo "▶ Generando Dockerfile de Ghost personalizado..."
+# ===================== DOCKERFILE GHOST =====================
 cat <<EOF > ghost/Dockerfile
 FROM ghost:latest
-
 USER root
 RUN npm install knex pg --save
 USER node
 EOF
 
-# =============== DOCKER-COMPOSE =================
-echo "▶ Generando docker-compose.yml..."
+# ===================== DOCKER COMPOSE =====================
 cat <<EOF > docker-compose.yml
 services:
   traefik:
@@ -265,12 +287,20 @@ volumes:
   letsencrypt:
 EOF
 
-# =============== DESPLIEGUE =================
-echo "▶ Levantando contenedores con Docker Compose..."
+# ===================== BACKUP AUTOMÁTICO n8n_data =====================
+echo "🗂️ Haciendo backup del volumen n8n_data..."
+docker run --rm \
+  -v n8n_data:/data \
+  -v "$BASE_DIR/backups":/backup \
+  alpine \
+  tar czf /backup/n8n_backup_$(date +%F_%H-%M-%S).tar.gz -C /data .
+
+# ===================== DESPLIEGUE FINAL =====================
+echo "🚀 Levantando contenedores..."
 docker compose up -d --build
 
 echo ""
 echo "✅ ¡Despliegue completo!"
 echo "🌐 n8n:   https://${N8N_DOMAIN}"
 echo "🌐 Ghost: https://${GHOST_DOMAIN}"
-echo "🔑 Ghost Token Service (local): http://localhost:5050/ghost-token"
+echo "🔑 Ghost Token Service: http://localhost:5050/ghost-token"
