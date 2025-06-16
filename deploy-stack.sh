@@ -53,6 +53,10 @@ echo "▶ Contraseña del usuario de Ghost:"
 read -rs GHOST_DB_PASSWORD
 echo ""
 
+echo "▶ Clave de Admin API de Ghost (key_id:secret):"
+read -r GHOST_ADMIN_API_KEY
+echo ""
+
 # ========== PostgreSQL Admin ==========
 echo "▶ Usuario administrador para PostgreSQL (ej: admin):"
 read -r DB_ADMIN_USER
@@ -62,10 +66,49 @@ echo ""
 
 # =============== CREACIÓN DE ESTRUCTURA ===============
 BASE_DIR=~/docker-stack
-mkdir -p "$BASE_DIR"/{n8n,ghost,letsencrypt}
+mkdir -p "$BASE_DIR"/{n8n,ghost,ghost-token-service,letsencrypt}
 touch "$BASE_DIR/letsencrypt/acme.json"
 chmod 600 "$BASE_DIR/letsencrypt/acme.json"
 cd "$BASE_DIR" || exit 1
+
+# =============== GHOST TOKEN SERVICE =================
+echo "▶ Generando servicio de generación de token JWT para Ghost..."
+
+cat <<EOF > ghost-token-service/app.py
+import jwt
+import datetime
+from flask import Flask, jsonify
+import os
+
+app = Flask(__name__)
+
+@app.route("/ghost-token")
+def get_ghost_token():
+    admin_api_key = os.getenv("GHOST_ADMIN_API_KEY")
+    key_id, secret = admin_api_key.split(":")
+    iat = int(datetime.datetime.utcnow().timestamp())
+    exp = iat + 5 * 60
+    header = {"alg": "HS256", "kid": key_id}
+    payload = {"iat": iat, "exp": exp, "aud": "/admin/"}
+    token = jwt.encode(payload, bytes.fromhex(secret), algorithm="HS256", headers=header)
+    return jsonify({"token": token})
+EOF
+
+cat <<EOF > ghost-token-service/requirements.txt
+Flask
+PyJWT
+EOF
+
+cat <<EOF > ghost-token-service/Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
+
+ENV FLASK_APP=app.py
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+EOF
 
 # =============== ENV FILE =================
 echo "▶ Generando .env..."
@@ -88,6 +131,7 @@ GHOST_DOMAIN=${GHOST_DOMAIN}
 GHOST_DB=${GHOST_DB}
 GHOST_DB_USER=${GHOST_DB_USER}
 GHOST_DB_PASSWORD=${GHOST_DB_PASSWORD}
+GHOST_ADMIN_API_KEY=${GHOST_ADMIN_API_KEY}
 EOF
 
 # =============== DOCKERFILE GHOST =================
@@ -199,6 +243,17 @@ services:
     depends_on:
       - mysql
 
+  ghost-token-service:
+    build:
+      context: ./ghost-token-service
+    restart: always
+    environment:
+      GHOST_ADMIN_API_KEY: \${GHOST_ADMIN_API_KEY}
+    ports:
+      - "5050:5000"
+    networks:
+      - internal
+
 networks:
   internal:
 
@@ -218,3 +273,4 @@ echo ""
 echo "✅ ¡Despliegue completo!"
 echo "🌐 n8n:   https://${N8N_DOMAIN}"
 echo "🌐 Ghost: https://${GHOST_DOMAIN}"
+echo "🔑 Ghost Token Service (local): http://localhost:5050/ghost-token"
