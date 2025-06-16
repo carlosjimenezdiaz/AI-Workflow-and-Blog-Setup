@@ -251,6 +251,17 @@ volumes:
   letsencrypt: {}
 EOF
 
+# ================== FIX: Crear carpeta tmp si no existe ==================
+echo "🔧 Verificando /var/lib/docker/tmp/..."
+if [ ! -d /var/lib/docker/tmp ]; then
+  echo "📁 Creando /var/lib/docker/tmp/..."
+  sudo mkdir -p /var/lib/docker/tmp
+  sudo chown root:root /var/lib/docker/tmp
+  sudo chmod 1777 /var/lib/docker/tmp
+else
+  echo "✅ /var/lib/docker/tmp ya existe."
+fi
+
 # ================= Backup n8n_data =================
 echo "🗂️ Haciendo backup del volumen n8n_data..."
 docker run --rm -v n8n_data:/data -v "$BASE_DIR/backups":/backup alpine \
