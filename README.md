@@ -35,9 +35,9 @@ Before running the script, make sure you have:
 
 ## 🚀 Deploying N8N
 - **Step 1**. Use your cloud provider’s console or terminal to login to your VM
-- **Step 2**. curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/setup-datascience-vm.sh
-- **Step 3**. Run the following command: chmod +x setup-data science-vm.sh
-- **Step 4**. Run the following command: ./setup-datascience-vm.sh
+- **Step 2**. curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
+- **Step 3**. Run the following command: chmod +x deploy-n8n.sh
+- **Step 4**. Run the following command: ./deploy-n8n.sh
 ---
 
 ### 🛠 Updating Services (n8n / Ghost / Traefik)
