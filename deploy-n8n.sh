@@ -2,15 +2,15 @@
 
 echo "==== N8N + PostgreSQL Deployment ===="
 
-read -p "Dominio base (ej. carlosjimenezdiaz.com): " DOMAIN_BASE
-read -p "Subdominio para n8n (ej. n8nserver): " SUBDOMAIN
-read -p "Nombre de la base de datos (ej. n8n_db): " DB_NAME
-read -p "Usuario de la base de datos: " DB_USER
-read -p "Contraseña de la base de datos: " DB_PASSWORD
-read -p "Zona horaria (ej. America/New_York): " TIMEZONE
-read -p "Correo para Let's Encrypt: " SSL_EMAIL
-read -p "Usuario para acceder a n8n (auth básica): " N8N_USER
-read -p "Contraseña para n8n (auth básica): " N8N_PASSWORD
+read -p "Base domain (e.g., carlosjimenezdiaz.com): " DOMAIN_BASE
+read -p "Subdomain for n8n (e.g., n8nserver): " SUBDOMAIN
+read -p "Database name (e.g., n8n_db): " DB_NAME
+read -p "Database user: " DB_USER
+read -p "Database password: " DB_PASSWORD
+read -p "Timezone (e.g., America/New_York): " TIMEZONE
+read -p "Email for Let's Encrypt: " SSL_EMAIL
+read -p "Username to access n8n (basic auth): " N8N_USER
+read -p "Password for n8n (basic auth): " N8N_PASSWORD
 
 DOMAIN="${SUBDOMAIN}.${DOMAIN_BASE}"
 
