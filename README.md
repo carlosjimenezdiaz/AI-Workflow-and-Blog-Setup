@@ -29,9 +29,10 @@ Before running the script, make sure you have:
 
 ## 🚀 Quick Start Guide
 - **Step 1**. Use your cloud provider’s console or terminal to login to your VM
-- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/self-host-n8n/main/deploy-stack.sh
+- **Step 2**. curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-stack.sh
 - **Step 3**. Run the following command: chmod +x deploy-stack.sh
 - **Step 4**. Run the following command: ./deploy-stack.sh
+
 
 ---
 
