@@ -87,6 +87,7 @@ services:
       - "traefik.http.routers.n8n.rule=Host(\`\${DOMAIN}\`) || Host(\`www.\${DOMAIN}\`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
     networks:
       - traefik
       - internal
