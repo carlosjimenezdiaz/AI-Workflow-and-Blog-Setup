@@ -1,22 +1,10 @@
 #!/bin/bash
 
-set -e  # Termina el script si ocurre un error
+set -e
 
-echo "==== N8N + PostgreSQL Deployment ===="
+echo "==== N8N + PostgreSQL + NGINX Deployment ===="
 
-# ✅ Protección contra doble ejecución accidental
-if [ -d ~/n8n_stack ]; then
-  read -p "⚠️ Ya existe ~/n8n_stack. ¿Quieres eliminarlo y continuar? (s/n): " confirm
-  if [[ "$confirm" =~ ^[sS]$ ]]; then
-    docker compose -f ~/n8n_stack/docker-compose.yml down --volumes --remove-orphans || true
-    rm -rf ~/n8n_stack
-  else
-    echo "❌ Cancelado por el usuario."
-    exit 1
-  fi
-fi
-
-# Función para leer y validar entrada
+# Función para leer entradas
 read_input() {
   local var_name=$1
   local prompt=$2
@@ -24,87 +12,59 @@ read_input() {
   while [[ -z "$input" ]]; do
     read -p "$prompt: " input
     if [[ -z "$input" ]]; then
-      echo "❌ El valor no puede estar vacío. Intenta de nuevo."
+      echo "❌ El valor no puede estar vacío."
     fi
   done
   eval "$var_name='$input'"
 }
 
-read_input DOMAIN_BASE "Base domain (e.g., carlosjimenezdiaz.com)"
-read_input SUBDOMAIN "Subdomain for n8n (e.g., n8nserver)"
-read_input DB_NAME "Database name (e.g., n8n_db)"
-read_input DB_USER "Database user"
-read_input DB_PASSWORD "Database password"
-read_input TIMEZONE "Timezone (e.g., America/New_York)"
-read_input SSL_EMAIL "Email for Let's Encrypt"
-read_input N8N_USER "Username to access n8n (basic auth)"
-read_input N8N_PASSWORD "Password for n8n (basic auth)"
+# Pedir datos
+read_input DOMAIN "Dominio completo (ej: aiserver.carlosjimenezdiaz.com)"
+read_input DB_NAME "Nombre de la base de datos (ej: n8n_db)"
+read_input DB_USER "Usuario de la base de datos"
+read_input DB_PASSWORD "Contraseña de la base de datos"
+read_input N8N_USER "Usuario para acceder a n8n"
+read_input N8N_PASSWORD "Contraseña para n8n"
+read_input TIMEZONE "Zona horaria (ej: America/New_York)"
+read_input SSL_EMAIL "Email para Let's Encrypt (Certbot)"
 
-DOMAIN="${SUBDOMAIN}.${DOMAIN_BASE}"
-
-echo "➡️  Actualizando sistema..."
-apt-get update && apt-get upgrade -y
-
-echo "➡️  Instalando paquetes base..."
-apt-get install -y nano vim tree htop curl wget unzip git make \
-  build-essential software-properties-common apt-transport-https \
-  ca-certificates gnupg lsb-release ufw tmux zsh
-
-# Verificar e instalar Docker si no está
+# Paso 1: Instalar Docker y Docker Compose si no existen
 if ! command -v docker &> /dev/null; then
-  echo "⚙️  Instalando Docker..."
+  echo "🛠 Instalando Docker..."
   curl -fsSL https://get.docker.com -o get-docker.sh
   sh get-docker.sh
 fi
 
-# Verificar e instalar Docker Compose V2 si no está
 if ! docker compose version &> /dev/null; then
-  echo "⚙️  Instalando Docker Compose V2..."
-  mkdir -p ~/.docker/cli-plugins/
+  echo "🛠 Instalando Docker Compose V2..."
+  mkdir -p ~/.docker/cli-plugins
   curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
   chmod +x ~/.docker/cli-plugins/docker-compose
 fi
 
-echo "➡️  Preparando stack..."
+# Paso 2: Instalar NGINX y Certbot
+echo "🛠 Instalando NGINX y Certbot..."
+apt-get update
+apt-get install -y nginx certbot python3-certbot-nginx
+
+# Paso 3: Crear stack n8n + PostgreSQL
+echo "📦 Desplegando servicios en ~/n8n_stack..."
 mkdir -p ~/n8n_stack && cd ~/n8n_stack
 
-echo "✅ Escribiendo archivo .env"
 cat <<EOF > .env
-DOMAIN_BASE=${DOMAIN_BASE}
-SUBDOMAIN=${SUBDOMAIN}
 DOMAIN=${DOMAIN}
-TIMEZONE=${TIMEZONE}
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
-SSL_EMAIL=${SSL_EMAIL}
 N8N_USER=${N8N_USER}
 N8N_PASSWORD=${N8N_PASSWORD}
+TIMEZONE=${TIMEZONE}
 EOF
 
-echo "✅ Escribiendo docker-compose.yml"
 cat <<EOF > docker-compose.yml
-services:
-  traefik:
-    image: traefik:latest
-    restart: always
-    command:
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --certificatesresolvers.myresolver.acme.httpchallenge=true
-      - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.myresolver.acme.email=\${SSL_EMAIL}
-      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
-    networks: [traefik]
+version: '3.8'
 
+services:
   postgres:
     image: postgres:latest
     restart: always
@@ -114,11 +74,12 @@ services:
       POSTGRES_PASSWORD: \${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks: [internal]
 
   n8n:
     image: n8nio/n8n
     restart: always
+    ports:
+      - "5678:5678"
     environment:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
@@ -129,37 +90,45 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=\${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=\${N8N_PASSWORD}
-      - WEBHOOK_TUNNEL_URL=https://\${DOMAIN}
       - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - WEBHOOK_TUNNEL_URL=https://\${DOMAIN}
       - TZ=\${TIMEZONE}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(\`\${DOMAIN}\`)"
-      - "traefik.http.routers.n8n.entrypoints=websecure"
-      - "traefik.http.routers.n8n.tls.certresolver=myresolver"
-      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-    networks:
-      - traefik
-      - internal
     depends_on:
       - postgres
 
-networks:
-  traefik:
-  internal:
-
 volumes:
   postgres_data:
-  letsencrypt:
 EOF
 
-echo "🔐 Preparando certificados SSL locales"
-mkdir -p letsencrypt
-touch letsencrypt/acme.json
-chmod 600 letsencrypt/acme.json
+# Levantar contenedores
+docker compose up -d
 
-echo "🚀 Levantando el stack con Docker Compose..."
-docker compose up -d --build
+# Paso 4: Configurar NGINX
+echo "🌐 Configurando NGINX para ${DOMAIN}..."
+cat <<EOF > /etc/nginx/sites-available/n8n
+server {
+    listen 80;
+    server_name ${DOMAIN};
 
-echo -e "\n🎉 ✅ Despliegue completado en: https://${DOMAIN}"
-echo "🔐 Accede con usuario: ${N8N_USER}"
+    location / {
+        proxy_pass http://localhost:5678;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF
+
+ln -sf /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/n8n
+nginx -t && systemctl reload nginx
+
+# Paso 5: Obtener certificados SSL
+echo "🔐 Solicitando certificados SSL para ${DOMAIN}..."
+certbot --nginx --non-interactive --agree-tos --redirect --email ${SSL_EMAIL} -d ${DOMAIN}
+
+# 🎉 Fin
+echo -e "\n✅ Despliegue completado: https://${DOMAIN}"
+echo "🔐 Usuario n8n: ${N8N_USER}"
