@@ -1,31 +1,35 @@
 #!/bin/bash
 
-set -e
+set -e  # Exit on error
 
-echo "🔧 Iniciando despliegue de n8n + PostgreSQL + NGINX + SSL..."
+echo "==== N8N + PostgreSQL + NGINX Deployment ===="
 
-read_var() {
-  local var="$1"
-  local prompt="$2"
-  local value=""
-  while [[ -z "$value" ]]; do
-    read -p "$prompt: " value
+# Ask for user inputs
+read_input() {
+  local var_name=$1
+  local prompt=$2
+  local input=""
+  while [[ -z "$input" ]]; do
+    read -p "$prompt: " input
+    if [[ -z "$input" ]]; then
+      echo "❌ No puede estar vacío. Intenta de nuevo."
+    fi
   done
-  eval "$var='$value'"
+  eval "$var_name='$input'"
 }
 
-read_var DOMAIN "Dominio completo (ej: aiserver.carlosjimenezdiaz.com)"
-read_var DB_NAME "Nombre de la base de datos"
-read_var DB_USER "Usuario de la base de datos"
-read_var DB_PASSWORD "Contraseña de la base de datos"
-read_var N8N_USER "Usuario para acceder a n8n"
-read_var N8N_PASSWORD "Contraseña de n8n"
-read_var SSL_EMAIL "Email para Let's Encrypt"
-read_var TIMEZONE "Zona horaria (ej: America/New_York)"
+read_input DOMAIN "Dominio completo para n8n (ej: aiserver.carlosjimenezdiaz.com)"
+read_input DB_NAME "Nombre de la base de datos"
+read_input DB_USER "Usuario de la base de datos"
+read_input DB_PASSWORD "Contraseña de la base de datos"
+read_input N8N_USER "Usuario de acceso a n8n"
+read_input N8N_PASSWORD "Contraseña de acceso a n8n"
+read_input TIMEZONE "Zona horaria (ej: America/New_York)"
+read_input SSL_EMAIL "Email para Let's Encrypt"
 
 mkdir -p ~/n8n_stack && cd ~/n8n_stack
 
-# .env
+# Crear archivo .env
 cat <<EOF > .env
 DOMAIN=${DOMAIN}
 DB_NAME=${DB_NAME}
@@ -33,11 +37,11 @@ DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 N8N_USER=${N8N_USER}
 N8N_PASSWORD=${N8N_PASSWORD}
-SSL_EMAIL=${SSL_EMAIL}
 TIMEZONE=${TIMEZONE}
+SSL_EMAIL=${SSL_EMAIL}
 EOF
 
-# docker-compose.yml
+# Crear docker-compose.yml
 cat <<EOF > docker-compose.yml
 version: '3.8'
 services:
@@ -50,7 +54,8 @@ services:
       POSTGRES_PASSWORD: \${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks: [internal]
+    networks:
+      - internal
 
   n8n:
     image: n8nio/n8n
@@ -65,80 +70,56 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=\${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=\${N8N_PASSWORD}
-      - N8N_HOST=0.0.0.0
+      - WEBHOOK_TUNNEL_URL=https://\${DOMAIN}
+      - N8N_HOST=n8n
       - N8N_PORT=5678
-      - WEBHOOK_URL=https://\${DOMAIN}
       - TZ=\${TIMEZONE}
-    networks: [internal]
-    container_name: n8n
-
-volumes:
-  postgres_data:
+    networks:
+      - internal
+    depends_on:
+      - postgres
 
 networks:
   internal:
+
+volumes:
+  postgres_data:
 EOF
 
-echo "🌐 Verificando NGINX y Certbot..."
-apt update
-apt install -y nginx certbot python3-certbot-nginx ufw
-
-# NGINX conf
-cat <<EOF > /etc/nginx/sites-available/n8n
-server {
-    listen 80;
-    server_name ${DOMAIN};
-    location / {
-        proxy_pass http://n8n:5678;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-EOF
-
-ln -sf /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/n8n
-
-nginx -t && systemctl reload nginx
-
-echo "🔐 Solicitando certificado SSL con Certbot..."
-certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL
-
-# HTTPS config
-cat <<EOF > /etc/nginx/sites-available/n8n
-server {
-    listen 443 ssl;
-    server_name ${DOMAIN};
-
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    location / {
-        proxy_pass http://n8n:5678;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-
-server {
-    listen 80;
-    server_name ${DOMAIN};
-    return 301 https://\$host\$request_uri;
-}
-EOF
-
-nginx -t && systemctl reload nginx
-
-echo "🚀 Levantando servicios..."
+# Levantar servicios primero
+echo "🚀 Levantando contenedores..."
 docker compose up -d
+sleep 10
 
-echo ""
-echo "✅ Accede a n8n en: https://${DOMAIN}"
-echo "📎 Callback URL OAuth2: https://${DOMAIN}/rest/oauth2-credential/callback"
+# Crear archivo NGINX para n8n
+NGINX_CONF="/etc/nginx/sites-available/n8n"
+cat <<EOF | sudo tee \$NGINX_CONF
+upstream n8n {
+    server 127.0.0.1:5678;
+}
+
+server {
+    listen 80;
+    server_name \${DOMAIN};
+
+    location / {
+        proxy_pass http://n8n;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF
+
+sudo ln -sf \$NGINX_CONF /etc/nginx/sites-enabled/n8n
+
+# Verificar y recargar NGINX
+sudo nginx -t && sudo systemctl reload nginx
+
+# Generar certificado SSL
+echo "🔐 Solicitando certificado SSL con Certbot..."
+sudo certbot --nginx -d \$DOMAIN --non-interactive --agree-tos -m \$SSL_EMAIL
+
+echo "✅ Despliegue completo. Visita: https://\$DOMAIN"
