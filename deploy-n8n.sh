@@ -1,10 +1,10 @@
 #!/bin/bash
 
-set -e  # Exit on error
+set -e
 
-echo "==== N8N + PostgreSQL + NGINX Deployment ===="
+echo "=== N8N + PostgreSQL + NGINX Deployment ==="
 
-# Ask for user inputs
+# Leer inputs
 read_input() {
   local var_name=$1
   local prompt=$2
@@ -12,24 +12,25 @@ read_input() {
   while [[ -z "$input" ]]; do
     read -p "$prompt: " input
     if [[ -z "$input" ]]; then
-      echo "❌ No puede estar vacío. Intenta de nuevo."
+      echo "❌ No puede estar vacío."
     fi
   done
   eval "$var_name='$input'"
 }
 
-read_input DOMAIN "Dominio completo para n8n (ej: aiserver.carlosjimenezdiaz.com)"
-read_input DB_NAME "Nombre de la base de datos"
+read_input DOMAIN "Dominio completo (ej: aiserver.carlosjimenezdiaz.com)"
+read_input DB_NAME "Nombre de la base de datos (ej: n8n_db)"
 read_input DB_USER "Usuario de la base de datos"
 read_input DB_PASSWORD "Contraseña de la base de datos"
 read_input N8N_USER "Usuario de acceso a n8n"
 read_input N8N_PASSWORD "Contraseña de acceso a n8n"
 read_input TIMEZONE "Zona horaria (ej: America/New_York)"
-read_input SSL_EMAIL "Email para Let's Encrypt"
+read_input SSL_EMAIL "Email para Let's Encrypt (ej: tu@correo.com)"
 
+# Crear estructura
 mkdir -p ~/n8n_stack && cd ~/n8n_stack
 
-# Crear archivo .env
+echo "✅ Creando .env"
 cat <<EOF > .env
 DOMAIN=${DOMAIN}
 DB_NAME=${DB_NAME}
@@ -41,9 +42,8 @@ TIMEZONE=${TIMEZONE}
 SSL_EMAIL=${SSL_EMAIL}
 EOF
 
-# Crear docker-compose.yml
+echo "✅ Creando docker-compose.yml"
 cat <<EOF > docker-compose.yml
-version: '3.8'
 services:
   postgres:
     image: postgres:latest
@@ -54,8 +54,7 @@ services:
       POSTGRES_PASSWORD: \${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - internal
+    networks: [internal]
 
   n8n:
     image: n8nio/n8n
@@ -70,40 +69,42 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=\${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=\${N8N_PASSWORD}
-      - WEBHOOK_TUNNEL_URL=https://\${DOMAIN}
-      - N8N_HOST=n8n
+      - N8N_HOST=localhost
       - N8N_PORT=5678
+      - WEBHOOK_URL=https://\${DOMAIN}
+      - VUE_APP_URL_BASE_API=https://\${DOMAIN}
       - TZ=\${TIMEZONE}
-    networks:
-      - internal
-    depends_on:
-      - postgres
-
-networks:
-  internal:
+    ports:
+      - "5678:5678"
+    networks: [internal]
 
 volumes:
   postgres_data:
+
+networks:
+  internal:
 EOF
 
-# Levantar servicios primero
-echo "🚀 Levantando contenedores..."
-docker compose up -d
+echo "✅ Levantando servicios con Docker Compose..."
+docker compose down || true
+docker compose up -d --build
+
+echo "✅ Esperando que n8n esté disponible..."
 sleep 10
 
-# Crear archivo NGINX para n8n
-NGINX_CONF="/etc/nginx/sites-available/n8n"
-cat <<EOF | sudo tee \$NGINX_CONF
-upstream n8n {
-    server 127.0.0.1:5678;
-}
+echo "✅ Instalando Certbot..."
+apt update && apt install -y certbot python3-certbot-nginx
 
+echo "✅ Configurando NGINX para ${DOMAIN}"
+mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+
+cat <<EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
-    server_name \${DOMAIN};
+    server_name ${DOMAIN};
 
     location / {
-        proxy_pass http://n8n;
+        proxy_pass http://localhost:5678;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -113,13 +114,20 @@ server {
 }
 EOF
 
-sudo ln -sf \$NGINX_CONF /etc/nginx/sites-enabled/n8n
+ln -sf /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/n8n
 
-# Verificar y recargar NGINX
-sudo nginx -t && sudo systemctl reload nginx
+echo "✅ Verificando configuración de NGINX..."
+nginx -t
 
-# Generar certificado SSL
-echo "🔐 Solicitando certificado SSL con Certbot..."
-sudo certbot --nginx -d \$DOMAIN --non-interactive --agree-tos -m \$SSL_EMAIL
+echo "✅ Reiniciando NGINX..."
+systemctl restart nginx
 
-echo "✅ Despliegue completo. Visita: https://\$DOMAIN"
+echo "✅ Solicitando certificado SSL para ${DOMAIN}..."
+certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m ${SSL_EMAIL}
+
+echo "✅ Reiniciando NGINX con SSL..."
+systemctl reload nginx
+
+echo "✅ Despliegue completado"
+echo "🌐 Accede a: https://${DOMAIN}"
+echo "🔐 Callback OAuth2: https://${DOMAIN}/rest/oauth2-credential/callback"
