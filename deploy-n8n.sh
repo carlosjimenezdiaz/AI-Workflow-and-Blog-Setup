@@ -1,10 +1,8 @@
 #!/bin/bash
-
 set -e
 
 echo "==== N8N + PostgreSQL + NGINX Deployment ===="
 
-# Función para leer entradas
 read_input() {
   local var_name=$1
   local prompt=$2
@@ -18,7 +16,6 @@ read_input() {
   eval "$var_name='$input'"
 }
 
-# Pedir datos
 read_input DOMAIN "Dominio completo (ej: aiserver.carlosjimenezdiaz.com)"
 read_input DB_NAME "Nombre de la base de datos (ej: n8n_db)"
 read_input DB_USER "Usuario de la base de datos"
@@ -28,7 +25,6 @@ read_input N8N_PASSWORD "Contraseña para n8n"
 read_input TIMEZONE "Zona horaria (ej: America/New_York)"
 read_input SSL_EMAIL "Email para Let's Encrypt (Certbot)"
 
-# Paso 1: Instalar Docker y Docker Compose si no existen
 if ! command -v docker &> /dev/null; then
   echo "🛠 Instalando Docker..."
   curl -fsSL https://get.docker.com -o get-docker.sh
@@ -42,13 +38,9 @@ if ! docker compose version &> /dev/null; then
   chmod +x ~/.docker/cli-plugins/docker-compose
 fi
 
-# Paso 2: Instalar NGINX y Certbot
-echo "🛠 Instalando NGINX y Certbot..."
-apt-get update
-apt-get install -y nginx certbot python3-certbot-nginx
+apt update
+apt install -y nginx certbot python3-certbot-nginx
 
-# Paso 3: Crear stack n8n + PostgreSQL
-echo "📦 Desplegando servicios en ~/n8n_stack..."
 mkdir -p ~/n8n_stack && cd ~/n8n_stack
 
 cat <<EOF > .env
@@ -88,8 +80,7 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=\${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=\${N8N_PASSWORD}
-      - N8N_HOST=0.0.0.0
-      - N8N_PORT=5678
+      - N8N_HOST=\${DOMAIN}
       - WEBHOOK_TUNNEL_URL=https://\${DOMAIN}
       - TZ=\${TIMEZONE}
     depends_on:
@@ -99,11 +90,8 @@ volumes:
   postgres_data:
 EOF
 
-# Levantar contenedores
 docker compose up -d
 
-# Paso 4: Configurar NGINX
-echo "🌐 Configurando NGINX para ${DOMAIN}..."
 cat <<EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
@@ -123,10 +111,7 @@ EOF
 ln -sf /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/n8n
 nginx -t && systemctl reload nginx
 
-# Paso 5: Obtener certificados SSL
-echo "🔐 Solicitando certificados SSL para ${DOMAIN}..."
 certbot --nginx --non-interactive --agree-tos --redirect --email ${SSL_EMAIL} -d ${DOMAIN}
 
-# 🎉 Fin
-echo -e "\n✅ Despliegue completado: https://${DOMAIN}"
-echo "🔐 Usuario n8n: ${N8N_USER}"
+echo -e "\n✅ Accede a: https://${DOMAIN}"
+echo "🔐 Usuario: ${N8N_USER}"
