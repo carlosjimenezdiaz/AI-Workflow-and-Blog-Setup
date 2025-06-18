@@ -1,23 +1,62 @@
 #!/bin/bash
 
+set -e  # Termina el script si ocurre un error
+
 echo "==== N8N + PostgreSQL Deployment ===="
 
-read -p "Base domain (e.g., carlosjimenezdiaz.com): " DOMAIN_BASE
-read -p "Subdomain for n8n (e.g., n8nserver): " SUBDOMAIN
-read -p "Database name (e.g., n8n_db): " DB_NAME
-read -p "Database user: " DB_USER
-read -p "Database password: " DB_PASSWORD
-read -p "Timezone (e.g., America/New_York): " TIMEZONE
-read -p "Email for Let's Encrypt: " SSL_EMAIL
-read -p "Username to access n8n (basic auth): " N8N_USER
-read -p "Password for n8n (basic auth): " N8N_PASSWORD
+# Función para leer y validar entrada
+read_input() {
+  local var_name=$1
+  local prompt=$2
+  local input=""
+  while [[ -z "$input" ]]; do
+    read -p "$prompt: " input
+    if [[ -z "$input" ]]; then
+      echo "❌ El valor no puede estar vacío. Intenta de nuevo."
+    fi
+  done
+  eval "$var_name='$input'"
+}
+
+read_input DOMAIN_BASE "Base domain (e.g., carlosjimenezdiaz.com)"
+read_input SUBDOMAIN "Subdomain for n8n (e.g., n8nserver)"
+read_input DB_NAME "Database name (e.g., n8n_db)"
+read_input DB_USER "Database user"
+read_input DB_PASSWORD "Database password"
+read_input TIMEZONE "Timezone (e.g., America/New_York)"
+read_input SSL_EMAIL "Email for Let's Encrypt"
+read_input N8N_USER "Username to access n8n (basic auth)"
+read_input N8N_PASSWORD "Password for n8n (basic auth)"
 
 DOMAIN="${SUBDOMAIN}.${DOMAIN_BASE}"
 
-# Crear carpeta del stack
+echo "➡️  Actualizando sistema..."
+apt-get update && apt-get upgrade -y
+
+echo "➡️  Instalando paquetes base..."
+apt-get install -y nano vim tree htop curl wget unzip git make \
+  build-essential software-properties-common apt-transport-https \
+  ca-certificates gnupg lsb-release ufw tmux zsh
+
+# Verificar e instalar Docker si no está
+if ! command -v docker &> /dev/null; then
+  echo "⚙️  Instalando Docker..."
+  curl -fsSL https://get.docker.com -o get-docker.sh
+  sh get-docker.sh
+fi
+
+# Verificar e instalar Docker Compose V2 si no está
+if ! docker compose version &> /dev/null; then
+  echo "⚙️  Instalando Docker Compose V2..."
+  mkdir -p ~/.docker/cli-plugins/
+  curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+  chmod +x ~/.docker/cli-plugins/docker-compose
+fi
+
+echo "➡️  Preparando stack..."
 mkdir -p ~/n8n_stack && cd ~/n8n_stack
 
-# Crear archivo .env
+echo "✅ Escribiendo archivo .env"
 cat <<EOF > .env
 DOMAIN_BASE=${DOMAIN_BASE}
 SUBDOMAIN=${SUBDOMAIN}
@@ -31,7 +70,7 @@ N8N_USER=${N8N_USER}
 N8N_PASSWORD=${N8N_PASSWORD}
 EOF
 
-# Crear docker-compose.yml
+echo "✅ Escribiendo docker-compose.yml"
 cat <<EOF > docker-compose.yml
 services:
   traefik:
@@ -84,7 +123,7 @@ services:
       - TZ=\${TIMEZONE}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(\`\${DOMAIN}\`) || Host(\`www.\${DOMAIN}\`)"
+      - "traefik.http.routers.n8n.rule=Host(\`\${DOMAIN}\`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls.certresolver=myresolver"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
@@ -103,5 +142,12 @@ volumes:
   letsencrypt:
 EOF
 
-# Iniciar el stack
+# Asegurar permisos de acme.json si existe
+mkdir -p letsencrypt
+touch letsencrypt/acme.json
+chmod 600 letsencrypt/acme.json
+
+echo "🚀 Levantando el stack con Docker Compose..."
 docker compose up -d --build
+
+echo "✅ Despliegue completado en https://${DOMAIN}"
