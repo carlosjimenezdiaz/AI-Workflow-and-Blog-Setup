@@ -62,8 +62,6 @@ TIMEZONE=${TIMEZONE}
 EOF
 
 cat <<EOF > docker-compose.yml
-version: '3.8'
-
 services:
   postgres:
     image: postgres:latest
