@@ -4,6 +4,18 @@ set -e  # Termina el script si ocurre un error
 
 echo "==== N8N + PostgreSQL Deployment ===="
 
+# ✅ Protección contra doble ejecución accidental
+if [ -d ~/n8n_stack ]; then
+  read -p "⚠️ Ya existe ~/n8n_stack. ¿Quieres eliminarlo y continuar? (s/n): " confirm
+  if [[ "$confirm" =~ ^[sS]$ ]]; then
+    docker compose -f ~/n8n_stack/docker-compose.yml down --volumes --remove-orphans || true
+    rm -rf ~/n8n_stack
+  else
+    echo "❌ Cancelado por el usuario."
+    exit 1
+  fi
+fi
+
 # Función para leer y validar entrada
 read_input() {
   local var_name=$1
@@ -111,18 +123,18 @@ services:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${DB_NAME}
-      - DB_POSTGRESDB_USER=${DB_USER}
-      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=\${DB_NAME}
+      - DB_POSTGRESDB_USER=\${DB_USER}
+      - DB_POSTGRESDB_PASSWORD=\${DB_PASSWORD}
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - WEBHOOK_TUNNEL_URL=https://${DOMAIN}
+      - N8N_BASIC_AUTH_USER=\${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=\${N8N_PASSWORD}
+      - WEBHOOK_TUNNEL_URL=https://\${DOMAIN}
       - N8N_HOST=0.0.0.0
-      - TZ=${TIMEZONE}
+      - TZ=\${TIMEZONE}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.n8n.rule=Host(\`\${DOMAIN}\`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls.certresolver=myresolver"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
@@ -141,7 +153,7 @@ volumes:
   letsencrypt:
 EOF
 
-# Asegurar permisos de acme.json si existe
+echo "🔐 Preparando certificados SSL locales"
 mkdir -p letsencrypt
 touch letsencrypt/acme.json
 chmod 600 letsencrypt/acme.json
@@ -149,4 +161,5 @@ chmod 600 letsencrypt/acme.json
 echo "🚀 Levantando el stack con Docker Compose..."
 docker compose up -d --build
 
-echo "✅ Despliegue completado en https://${DOMAIN}"
+echo -e "\n🎉 ✅ Despliegue completado en: https://${DOMAIN}"
+echo "🔐 Accede con usuario: ${N8N_USER}"
