@@ -2,6 +2,34 @@
 
 set -e
 
+echo "=== Instalando herramientas necesarias ==="
+apt update && apt install -y \
+    git \
+    curl \
+    wget \
+    nano \
+    vim \
+    tree \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    software-properties-common
+
+echo "✅ Instalando Docker V2..."
+if ! command -v docker &> /dev/null; then
+  curl -fsSL https://get.docker.com | bash
+fi
+
+echo "✅ Instalando Docker Compose V2 plugin..."
+mkdir -p ~/.docker/cli-plugins/
+curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+chmod +x ~/.docker/cli-plugins/docker-compose
+
+echo "🔁 Reiniciando Docker..."
+systemctl restart docker
+docker --version
+docker compose version
+
 echo "=== N8N + PostgreSQL + NGINX Deployment ==="
 
 # Leer inputs
@@ -27,7 +55,6 @@ read_input N8N_PASSWORD "Contraseña de acceso a n8n"
 read_input TIMEZONE "Zona horaria (ej: America/New_York)"
 read_input SSL_EMAIL "Email para Let's Encrypt (ej: tu@correo.com)"
 
-# Crear estructura
 mkdir -p ~/n8n_stack && cd ~/n8n_stack
 
 echo "✅ Creando .env"
@@ -92,8 +119,8 @@ docker compose up -d --build
 echo "✅ Esperando que n8n esté disponible..."
 sleep 10
 
-echo "✅ Instalando Certbot..."
-apt update && apt install -y certbot python3-certbot-nginx
+echo "✅ Instalando Certbot y NGINX si no existen..."
+apt install -y nginx certbot python3-certbot-nginx
 
 echo "✅ Configurando NGINX para ${DOMAIN}"
 mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
@@ -125,7 +152,7 @@ systemctl restart nginx
 echo "✅ Solicitando certificado SSL para ${DOMAIN}..."
 certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m ${SSL_EMAIL}
 
-echo "✅ Reiniciando NGINX con SSL..."
+echo "✅ Recargando NGINX con SSL..."
 systemctl reload nginx
 
 echo "✅ Despliegue completado"
