@@ -1,5 +1,5 @@
-# 🚀 Self-Host n8n + Ghost with Docker Compose + Traefik
-This project provides a **plug-and-play script** to self-host [n8n](https://n8n.io) (workflow automation) and [Ghost](https://ghost.org) (professional blogging platform) on **any Linux cloud VM**, with full HTTPS support, no usage limits, and a unified PostgreSQL backend. Whether you're running on AWS, DigitalOcean, Google Cloud, or Oracle Cloud, this setup gives you complete control, privacy, and extendability — perfect for automation pros, bloggers, and indie devs.
+# 🚀 Self-Host n8n + Postiz + Ghost with Docker Compose + NGINX
+This project provides a plug-and-play script to self-host n8n (workflow automation), Postiz (AI-powered financial content assistant), and Ghost (professional publishing platform) on any Linux cloud VM — with full HTTPS support, zero usage limits, and a unified PostgreSQL backend. Whether you're automating tasks with n8n, publishing a blog with Ghost, or generating financial insights with Postiz, this setup gives you full control, privacy, and scalability. Ideal for creators, automation pros, financial analysts, and indie devs building data-driven experiences.
 
 ---
 
