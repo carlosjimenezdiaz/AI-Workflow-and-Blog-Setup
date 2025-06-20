@@ -27,13 +27,13 @@ Before running the script, make sure you have:
 
 ---
 
-## FIRST: 🚀 Updating the VM
+## 🚀 Updating the VM for Data Science Work
 - **Step 1**. Use your cloud provider’s console or terminal to log in to your VM
 - **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/setup-datascience-vm.sh
 - **Step 3**. Run the following command: chmod +x setup-datascience-vm.sh
 - **Step 4**. Run the following command: ./setup-datascience-vm.sh
 
-## SECOND: 🚀 Deploying N8N
+## 🚀 Deploying N8N
 - **Step 1**. Use your cloud provider’s console or terminal to log in to your VM
 - **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
 - **Step 3**. Run the following command: chmod +x deploy-n8n.sh
