@@ -158,3 +158,48 @@ systemctl reload nginx
 echo "✅ Despliegue completado"
 echo "🌐 Accede a: https://${DOMAIN}"
 echo "🔐 Callback OAuth2: https://${DOMAIN}/rest/oauth2-credential/callback"
+
+echo "✅ Creando script de backup en ~/n8n_stack/backup_n8n_db.sh"
+cat <<'EOF' > ~/n8n_stack/backup_n8n_db.sh
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+ENV_FILE=".env"
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "❌ Archivo .env no encontrado"
+  exit 1
+fi
+
+export $(grep -v '^#' "$ENV_FILE" | xargs)
+
+REQUIRED_VARS=("DB_NAME" "DB_USER" "DB_PASSWORD")
+for var in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!var}" ]; then
+    echo "❌ Falta la variable \$var"
+    exit 1
+  fi
+done
+
+BACKUP_DIR=~/n8n_backups
+mkdir -p "\$BACKUP_DIR"
+
+TIMESTAMP=\$(date +"%Y%m%d_%H%M%S")
+BACKUP_FILE="\$BACKUP_DIR/n8n_backup_\$TIMESTAMP.sql"
+
+echo "📦 Backup en \$BACKUP_FILE..."
+docker compose exec -T postgres pg_dump -U "\$DB_USER" "\$DB_NAME" > "\$BACKUP_FILE"
+
+echo "🧹 Limpiando backups antiguos, dejando solo los 10 más recientes..."
+ls -tp "\$BACKUP_DIR"/*.sql | grep -v '/$' | tail -n +11 | xargs -r rm --
+
+echo "✅ Backup finalizado correctamente."
+EOF
+
+chmod +x ~/n8n_stack/backup_n8n_db.sh
+
+echo "✅ Configurando cronjob diario para backup..."
+(crontab -l 2>/dev/null; echo "0 3 * * * ~/n8n_stack/backup_n8n_db.sh >> ~/n8n_stack/backup.log 2>&1") | crontab -
+
+echo "✅ Script de backup creado y cronjob registrado (diario a las 03:00 AM)"
