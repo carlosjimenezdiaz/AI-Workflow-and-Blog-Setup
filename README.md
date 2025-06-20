@@ -28,23 +28,25 @@ Before running the script, make sure you have:
 ---
 
 ## 🚀 Updating the VM
-- **Step 1**. Use your cloud provider’s console or terminal to login to your VM
-- **Step 2**. curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/setup-datascience-vm.sh
+- **Step 1**. Use your cloud provider’s console or terminal to log in to your VM
+- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/setup-datascience-vm.sh
 - **Step 3**. Run the following command: chmod +x setup-datascience-vm.sh
 - **Step 4**. Run the following command: ./setup-datascience-vm.sh
 
 ## 🚀 Deploying N8N
-- **Step 1**. Use your cloud provider’s console or terminal to login to your VM
-- **Step 2**. curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
+- **Step 1**. Use your cloud provider’s console or terminal to log in to your VM
+- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
 - **Step 3**. Run the following command: chmod +x deploy-n8n.sh
 - **Step 4**. Run the following command: ./deploy-n8n.sh
----
 
-### 🛠 Updating Services (n8n / Ghost / Traefik)
-- cd ~/n8n-compose
-- sudo docker compose pull
-- sudo docker compose down
-- sudo docker compose up -d
+### 🛠 Updating n8n
+- **Step 1**. Use your cloud provider’s console or terminal to log in to your VM
+- **Step 2**. Go inside the folder where the .env file and the docker-compose file are (should be n8n_stack).
+- **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/update_n8n.sh
+- **Step 3**. Run the following command: chmod +x update_n8n.sh
+- **Step 4**. Run the following command: ./update_n8n.sh
+- **Step 4**. If you have folders with your workflows, you need to activate the new version so that you can see the folder structure inside n8n.
+---
 
 ### 💾 Optional: Setup Scheduled Backups
 Use your cloud provider’s snapshot system to create automatic backups of your VM's disk.
@@ -61,7 +63,7 @@ Recommended: Daily snapshot schedule for quick recovery from configuration error
 
 ### 📘 Resources
 - n8n Documentation
-- Traefik Docs
+- NGINX Docs
 - Docker Compose Docs
 
 ### 📄 License
