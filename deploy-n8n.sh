@@ -110,7 +110,6 @@ volumes:
 
 networks:
   internal:
-  ghostnet:
 EOF
 
 echo "✅ Levantando servicios con Docker Compose..."
