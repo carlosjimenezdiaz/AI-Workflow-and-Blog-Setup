@@ -81,7 +81,7 @@ services:
       POSTGRES_PASSWORD: \${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks: [internal]
+    networks: [internal, ghostnet]
 
   n8n:
     image: n8nio/n8n
@@ -103,13 +103,14 @@ services:
       - TZ=\${TIMEZONE}
     ports:
       - "5678:5678"
-    networks: [internal]
+    networks: [internal, ghostnet]
 
 volumes:
   postgres_data:
 
 networks:
   internal:
+  ghostnet:
 EOF
 
 echo "✅ Levantando servicios con Docker Compose..."
