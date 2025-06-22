@@ -38,6 +38,7 @@ Before running the script, make sure you have:
 - **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
 - **Step 3**. Run the following command: chmod +x deploy-n8n.sh
 - **Step 4**. Run the following command: ./deploy-n8n.sh
+- **Step 5**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
 
 ---
 
