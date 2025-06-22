@@ -48,7 +48,6 @@ Before running the script, make sure you have:
 - **Step 2**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/update_n8n.sh
 - **Step 3**. Run the following command: chmod +x update_n8n.sh
 - **Step 4**. Run the following command: ./update_n8n.sh
-- **Step 5**. Run the following command: curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/ghost_token_service/
   
 ### 💾 Optional: Setup Scheduled Backups
 Use your cloud provider’s snapshot system to create automatic backups of your VM's disk.
