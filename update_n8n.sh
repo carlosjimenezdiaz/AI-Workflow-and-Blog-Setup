@@ -32,9 +32,9 @@ echo "♻️  Restarting containers..."
 docker compose down
 docker compose up -d
 
-# Step 4: Restore backup (just in case the DB was recreated or cleared)
-echo "♻️  Restoring backup into $DB_NAME..."
-cat "$BACKUP_FILE" | docker compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME"
-echo "✅ Backup restored"
+# Step 4: (Optional) Restore backup — usually not needed for updates
+# echo "♻️  Restoring backup into $DB_NAME..."
+# cat "$BACKUP_FILE" | docker compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME"
+# echo "✅ Backup restored"
 
-echo "🚀 n8n successfully updated and available at: https://$DOMAIN"
+echo "🚀 n8n successfully updated and available at: https://$N8N_DOMAIN"
