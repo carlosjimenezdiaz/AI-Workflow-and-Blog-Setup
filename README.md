@@ -1,35 +1,44 @@
-🚀 Self-Host n8n with Docker Compose + NGINX + Certbot
-This project provides a plug-and-play script to self-host n8n, the powerful workflow automation tool, with PostgreSQL for persistence, NGINX as reverse proxy, and free HTTPS via Certbot — all running on your own Linux VM.
+🚀 Self-Host n8n + Ghost + Postiz with Docker Compose + NGINX + Certbot
+This project provides a plug-and-play script to self-host a full-featured automation and publishing stack — including n8n for workflow automation, Ghost for professional blogging, and Postiz for AI-powered social media content — all backed by PostgreSQL and served securely through NGINX with free SSL via Certbot.
 
-Gain full control over your workflows, automate anything, and scale without limits — ideal for developers, startups, creators, and automation pros.
+Whether you're automating tasks, building a blog, or managing financial content, this setup gives you full control, privacy, and scalability. Perfect for developers, creators, startups, and digital entrepreneurs.
 
 📦 What's Included
-- 🧩 One-click shell script: deploy-n8n.sh
-- 🐳 Docker Compose stack:
-- n8n – Workflow automation platform
-- PostgreSQL – For persistent storage
-- NGINX – Reverse proxy with virtual host support
-- 🔒 Free SSL certificates via Certbot (Let's Encrypt)
-- 🔁 Auto-renewal of SSL every 60 days via systemd timer
-- 🌐 Multi-subdomain support with NGINX server blocks
-- 💾 Persistent volumes for workflows and data
+
+🧩 One-click shell script: deploy-n8n.sh
+
+🐳 Docker Compose stack:
+
+n8n – Workflow automation platform
+
+Ghost – Headless CMS and blogging platform
+
+Postiz – AI-powered social media and financial content assistant
+
+PostgreSQL – Persistent storage engine (with separate DBs per service)
+
+NGINX – Reverse proxy with virtual host support
+
+🔒 Certbot – Free SSL certificates via Let's Encrypt
+
+🔁 Auto-renewal of SSL certificates every 60 days via systemd
+
+🌐 Multi-domain/subdomain support via NGINX server blocks
+
+💾 Persistent volumes for all apps and data
 
 🖥 Requirements
 Make sure you have:
-- ✅ Ubuntu 22.04 LTS (or compatible) VM
-- ✅ Root or sudo access
-- ✅ Registered domain or subdomains (e.g. n8n.example.com)
-- ✅ DNS A record(s) pointing to your VM
-- ✅ Ports 80 and 443 open (for HTTP/HTTPS)
+
+✅ Ubuntu 22.04 LTS (or compatible) VM
+
+✅ Root or sudo access
+
+✅ Registered domain(s) or subdomains (e.g. n8n.example.com, blog.example.com, postiz.example.com)
+
+✅ DNS A records pointing to your VM
+
+✅ Ports 80 and 443 open for HTTP/HTTPS access
 
 🚀 Deployment Steps
-SSH into your VM
-
-Download and run the setup script:
-- curl -O https://raw.githubusercontent.com/carlosjimenezdiaz/AI-Workflow-and-Blog-Setup/main/deploy-n8n.sh
-- chmod +x deploy-n8n.sh
-- ./deploy-n8n.sh
-
-🔁 Auto-Renewal of SSL Certificates
-Certbot is installed with a systemd timer that runs:
-- certbot renew --quiet --nginx
+SSH into your VM and run:
