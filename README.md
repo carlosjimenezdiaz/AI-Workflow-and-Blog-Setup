@@ -1,5 +1,5 @@
-🚀 Self-Host **n8n** + **Ghost** + **Postiz** with **Docker Compose + NGINX + Certbot**
-This project provides a plug-and-play script to self-host a full-featured automation and publishing stack — including n8n for workflow automation, Ghost for professional blogging, and Postiz for AI-powered social media content — all backed by PostgreSQL and served securely through NGINX with free SSL via Certbot.
+🚀 Self-Host **n8n** + **Ghost** with **Docker Compose + NGINX + Certbot**
+This project provides a plug-and-play script to self-host a full-featured automation and publishing stack — including n8n for workflow automation, Ghost for professional blogging all backed by PostgreSQL and served securely through NGINX with free SSL via Certbot.
 
 Whether you're automating tasks, building a blog, or managing financial content, this setup gives you full control, privacy, and scalability. Perfect for developers, creators, startups, and digital entrepreneurs.
 
@@ -8,7 +8,6 @@ Whether you're automating tasks, building a blog, or managing financial content,
 - 🐳 Docker Compose stack:
 - n8n – Workflow automation platform
 - Ghost – Headless CMS and blogging platform
-- Postiz – AI-powered social media and financial content assistant
 - PostgreSQL – Persistent storage engine (with separate DBs per service)
 - NGINX – Reverse proxy with virtual host support
 - 🔒 Certbot – Free SSL certificates via Let's Encrypt
