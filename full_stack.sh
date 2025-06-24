@@ -133,70 +133,11 @@ services:
       - "5678:5678"
     networks: [fullnet]
 
-  postiz:
-    image: ghcr.io/gitroomhq/postiz-app:latest
-    restart: always
-    environment:
-      MAIN_URL: "https://${POSTIZ_DOMAIN}"
-      FRONTEND_URL: "https://${POSTIZ_DOMAIN}"
-      NEXT_PUBLIC_BACKEND_URL: "https://${POSTIZ_DOMAIN}/api"
-      JWT_SECRET: "${POSTIZ_JWT_SECRET}"
-      DATABASE_URL: "postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local"
-      REDIS_URL: "redis://postiz-redis:6379"
-      BACKEND_INTERNAL_URL: "http://localhost:3000"
-      IS_GENERAL: "true"
-      DISABLE_REGISTRATION: "false"
-      STORAGE_PROVIDER: "local"
-      UPLOAD_DIRECTORY: "/uploads"
-      NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
-    volumes:
-      - postiz-config:/config/
-      - postiz-uploads:/uploads/
-    ports:
-      - "5000:5000"
-    networks: [fullnet]
-    depends_on:
-      postiz-postgres:
-        condition: service_healthy
-      postiz-redis:
-        condition: service_healthy
-
-  postiz-postgres:
-    image: postgres:17-alpine
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: postiz-password
-      POSTGRES_USER: postiz-user
-      POSTGRES_DB: postiz-db-local
-    volumes:
-      - postgres-volume:/var/lib/postgresql/data
-    networks: [fullnet]
-    healthcheck:
-      test: pg_isready -U postiz-user -d postiz-db-local
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-  postiz-redis:
-    image: redis:7.2
-    restart: always
-    volumes:
-      - postiz-redis-data:/data
-    networks: [fullnet]
-    healthcheck:
-      test: redis-cli ping
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
 volumes:
   postgres_data:
   ghost_content:
   ghost_db_data:
-  postiz-config:
-  postiz-uploads:
   postgres-volume:
-  postiz-redis-data:
 
 networks:
   fullnet:
