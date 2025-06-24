@@ -133,6 +133,13 @@ services:
       - "5678:5678"
     networks: [fullnet]
 
+  ghost_token_service:
+    build: .
+    container_name: ghost_token_service
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   ghost_content:
