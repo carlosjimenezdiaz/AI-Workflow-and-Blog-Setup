@@ -3,6 +3,9 @@
 set -e
 
 # === Validar y cargar archivo .env ===
+SCRIPT_DIR="$(cd "$(dirname \"${BASH_SOURCE[0]}\")" && pwd)"
+cd "$SCRIPT_DIR"
+
 if [ ! -f .env ]; then
   echo "❌ Archivo .env no encontrado. Asegúrate de tenerlo en el mismo directorio que este script."
   exit 1
@@ -30,8 +33,6 @@ echo "🔁 Reiniciando Docker..."
 systemctl restart docker
 docker --version
 docker compose version
-
-mkdir -p ~/ghost_stack && cd ~/ghost_stack
 
 echo "✅ Generando docker-compose.yml"
 cat <<'EOF' > docker-compose.yml
@@ -86,7 +87,7 @@ create_nginx_config() {
   cat <<EOF > /etc/nginx/sites-available/$domain
 server {
     listen 80;
-    server_name $domain;
+    server_name $domain www.$domain;
 
     location / {
         proxy_pass http://localhost:2368;
@@ -98,6 +99,12 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 }
+
+server {
+    listen 80;
+    server_name www.$domain;
+    return 301 https://$domain\$request_uri;
+}
 EOF
   ln -sf /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 }
@@ -107,6 +114,6 @@ create_nginx_config $GHOST_DOMAIN
 nginx -t && systemctl reload nginx
 
 echo "✅ Solicitando certificado SSL para Ghost..."
-certbot --nginx -d $GHOST_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL
+certbot --nginx -d $GHOST_DOMAIN -d www.$GHOST_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL
 
 echo "✅ Ghost desplegado en: https://$GHOST_DOMAIN"
