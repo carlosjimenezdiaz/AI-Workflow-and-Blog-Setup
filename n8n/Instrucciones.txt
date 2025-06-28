@@ -1,0 +1,6 @@
+# Instrucciones
+1. Ejecutar n8n_setup.sh
+2. Ejecutar backup.sh
+3. Activar el Cron: 
+   3.1) Ejecuta: crontab -e
+   3.2) Ejecuta: 0 4 * * * /home/$(whoami)/n8n/backup.sh >> /home/$(whoami)/n8n/backup.log 2>&1
