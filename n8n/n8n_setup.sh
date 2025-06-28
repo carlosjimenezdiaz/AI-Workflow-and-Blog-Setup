@@ -48,7 +48,7 @@ read_input() {
 echo "✅ Generando docker-compose.yml"
 cat <<'EOF' > docker-compose.yml
 services:
-  postgres:
+  postgres_n8n:
     image: postgres:latest
     restart: always
     environment:
@@ -146,7 +146,7 @@ export $(grep -v '^#' "$ENV" | xargs)
 mkdir -p ~/n8n/backups
 TS=$(date +"%Y%m%d_%H%M%S")
 
-docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" > ~/n8n/backups/n8n_backup_$TS.sql
+docker compose exec -T postgres_n8n pg_dump -U "$DB_USER" "$DB_NAME" > ~/n8n/backups/n8n_backup_$TS.sql
 
 ls -tp ~/n8n/backups/*.sql | grep -v '/$' | tail -n +11 | xargs -r rm --
 EOF
