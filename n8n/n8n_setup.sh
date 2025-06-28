@@ -33,18 +33,6 @@ docker compose version
 
 echo "=== Despliegue de n8n ==="
 
-# Leer variables
-read_input() {
-  local var_name=$1
-  local prompt=$2
-  local input=""
-  while [[ -z "$input" ]]; do
-    read -p "$prompt: " input
-    if [[ -z "$input" ]]; then echo "❌ No puede estar vacío."; fi
-  done
-  eval "$var_name='$input'"
-}
-
 echo "✅ Generando docker-compose.yml"
 cat <<'EOF' > docker-compose.yml
 services:
@@ -64,7 +52,7 @@ services:
     restart: always
     environment:
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_HOST=postgres_n8n
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=${DB_NAME}
       - DB_POSTGRESDB_USER=${DB_USER}
@@ -108,7 +96,7 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
     }
 }
@@ -119,21 +107,34 @@ EOF
 get_port_for_domain() {
   case $1 in
     $N8N_DOMAIN) echo 5678 ;;
-    *) echo "❌ Dominio desconocido" && exit 1 ;;
+    *) echo "❌ Dominio desconocido: $1" && exit 1 ;;
   esac
 }
 
 create_nginx_config $N8N_DOMAIN
 
-nginx -t && systemctl reload nginx
+echo "🔍 Verificando configuración de NGINX..."
+if nginx -t; then
+  echo "✅ NGINX válido. Recargando..."
+  systemctl reload nginx
+else
+  echo "❌ Error en la configuración de NGINX. Abortando..."
+  exit 1
+fi
 
 echo "✅ Solicitando certificados SSL..."
-certbot --nginx -d $N8N_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL
+if certbot --nginx -d $N8N_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL; then
+  echo "✅ Certificado SSL generado con éxito."
+else
+  echo "❌ Error al generar certificado SSL con Certbot."
+  exit 1
+fi
 
 echo "✅ Todo está desplegado en:"
 echo "- n8n: https://$N8N_DOMAIN"
 
 echo "✅ Creando backup script diario para n8n..."
+mkdir -p ~/n8n
 cat <<'EOF' > ~/n8n/backup.sh
 #!/bin/bash
 set -e
