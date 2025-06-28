@@ -131,27 +131,3 @@ fi
 
 echo "✅ Todo está desplegado en:"
 echo "- n8n: https://${N8N_DOMAIN} (o https://${BASE_DOMAIN})"
-
-echo "✅ Creando backup script diario para n8n..."
-mkdir -p ~/n8n
-cat <<'EOF' > ~/n8n/backup.sh
-#!/bin/bash
-set -e
-cd "$(dirname "$0")"
-
-ENV=".env"
-if [ ! -f "$ENV" ]; then echo "❌ .env no encontrado"; exit 1; fi
-export $(grep -v '^#' "$ENV" | xargs)
-
-mkdir -p ~/n8n/backups
-TS=$(date +"%Y%m%d_%H%M%S")
-
-docker compose exec -T postgres_n8n pg_dump -U "$DB_USER" "$DB_NAME" > ~/n8n/backups/n8n_backup_$TS.sql
-
-ls -tp ~/n8n/backups/*.sql | grep -v '/$' | tail -n +11 | xargs -r rm --
-EOF
-
-chmod +x ~/n8n/backup.sh
-(crontab -l 2>/dev/null; echo "0 4 * * * ~/n8n/backup.sh >> ~/n8n/backup.log 2>&1") | crontab -
-
-echo "✅ Configuración y backups completos."
