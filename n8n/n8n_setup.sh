@@ -11,6 +11,9 @@ fi
 echo "📦 Cargando variables desde .env..."
 export $(grep -v '^#' .env | xargs)
 
+# Extraer dominio base (sin www)
+BASE_DOMAIN=$(echo $N8N_DOMAIN | sed 's/^www\.//')
+
 echo "=== Instalando herramientas necesarias ==="
 apt update && apt install -y \
     git curl wget nano vim tree ca-certificates gnupg \
@@ -82,16 +85,14 @@ echo "✅ Iniciando stack completo..."
 docker compose down || true
 docker compose up -d --build
 
-echo "✅ Configurando NGINX y certificados SSL..."
-create_nginx_config() {
-  local domain=$1
-  cat <<EOF > /etc/nginx/sites-available/$domain
+echo "✅ Configurando NGINX para $N8N_DOMAIN y $BASE_DOMAIN..."
+cat <<EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
-    server_name $domain;
+    server_name ${N8N_DOMAIN} ${BASE_DOMAIN};
 
     location / {
-        proxy_pass http://localhost:$(get_port_for_domain $domain);
+        proxy_pass http://localhost:5678;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -100,18 +101,16 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 }
+
+# Redirigir www → sin www (opcional pero recomendado)
+server {
+    listen 80;
+    server_name www.${BASE_DOMAIN};
+    return 301 https://${BASE_DOMAIN}\$request_uri;
+}
 EOF
-  ln -sf /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
-}
 
-get_port_for_domain() {
-  case $1 in
-    $N8N_DOMAIN) echo 5678 ;;
-    *) echo "❌ Dominio desconocido: $1" && exit 1 ;;
-  esac
-}
-
-create_nginx_config $N8N_DOMAIN
+ln -sf /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/n8n
 
 echo "🔍 Verificando configuración de NGINX..."
 if nginx -t; then
@@ -122,8 +121,8 @@ else
   exit 1
 fi
 
-echo "✅ Solicitando certificados SSL..."
-if certbot --nginx -d $N8N_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL; then
+echo "✅ Solicitando certificados SSL para $N8N_DOMAIN y $BASE_DOMAIN..."
+if certbot --nginx -d $N8N_DOMAIN -d $BASE_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL; then
   echo "✅ Certificado SSL generado con éxito."
 else
   echo "❌ Error al generar certificado SSL con Certbot."
@@ -131,7 +130,7 @@ else
 fi
 
 echo "✅ Todo está desplegado en:"
-echo "- n8n: https://$N8N_DOMAIN"
+echo "- n8n: https://${N8N_DOMAIN} (o https://${BASE_DOMAIN})"
 
 echo "✅ Creando backup script diario para n8n..."
 mkdir -p ~/n8n
