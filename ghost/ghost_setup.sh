@@ -2,10 +2,10 @@
 
 set -e
 
-# === Validar y cargar archivo .env ===
-SCRIPT_DIR="$(cd "$(dirname \"${BASH_SOURCE[0]}\")" && pwd)"
-cd "$SCRIPT_DIR"
+# === Posicionarse en el directorio del script ===
+cd "$(dirname "$0")"
 
+# === Validar y cargar archivo .env ===
 if [ ! -f .env ]; then
   echo "❌ Archivo .env no encontrado. Asegúrate de tenerlo en el mismo directorio que este script."
   exit 1
@@ -13,6 +13,9 @@ fi
 
 echo "📦 Cargando variables desde .env..."
 export $(grep -v '^#' .env | xargs)
+
+# Extraer dominio base
+BASE_DOMAIN=$(echo $GHOST_DOMAIN | sed 's/^www\.//')
 
 echo "=== Instalando herramientas necesarias ==="
 apt update && apt install -y \
@@ -34,6 +37,7 @@ systemctl restart docker
 docker --version
 docker compose version
 
+# === Crear archivo docker-compose.yml ===
 echo "✅ Generando docker-compose.yml"
 cat <<'EOF' > docker-compose.yml
 services:
@@ -82,12 +86,12 @@ echo "✅ Iniciando stack Ghost..."
 docker compose down || true
 docker compose up -d --build
 
-create_nginx_config() {
-  local domain=$1
-  cat <<EOF > /etc/nginx/sites-available/$domain
+# === Configurar archivo NGINX ===
+echo "✅ Configurando NGINX para $GHOST_DOMAIN..."
+cat <<EOF > /etc/nginx/sites-available/ghost
 server {
     listen 80;
-    server_name $domain www.$domain;
+    server_name ${GHOST_DOMAIN} ${BASE_DOMAIN};
 
     location / {
         proxy_pass http://localhost:2368;
@@ -99,21 +103,26 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 }
-
-server {
-    listen 80;
-    server_name www.$domain;
-    return 301 https://$domain\$request_uri;
-}
 EOF
-  ln -sf /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
-}
 
-create_nginx_config $GHOST_DOMAIN
+ln -sf /etc/nginx/sites-available/ghost /etc/nginx/sites-enabled/ghost
 
-nginx -t && systemctl reload nginx
+echo "🔍 Verificando configuración de NGINX..."
+if nginx -t; then
+  echo "✅ NGINX válido. Recargando..."
+  systemctl reload nginx
+else
+  echo "❌ Error en la configuración de NGINX. Abortando..."
+  exit 1
+fi
 
-echo "✅ Solicitando certificado SSL para Ghost..."
-certbot --nginx -d $GHOST_DOMAIN -d www.$GHOST_DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL
+# === SSL con Certbot ===
+echo "✅ Solicitando certificados SSL para $GHOST_DOMAIN y $BASE_DOMAIN..."
+if certbot --nginx --cert-name $BASE_DOMAIN --expand -d $BASE_DOMAIN -d $GHOST_DOMAIN -m $SSL_EMAIL --agree-tos --non-interactive --redirect; then
+  echo "✅ Certificado SSL generado con éxito."
+else
+  echo "❌ Error al generar certificado SSL con Certbot."
+  exit 1
+fi
 
-echo "✅ Ghost desplegado en: https://$GHOST_DOMAIN"
+echo "🎉 Ghost está desplegado en: https://$GHOST_DOMAIN"
