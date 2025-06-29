@@ -1,9 +1,0 @@
-services:
-  ghost-token:
-    build: .
-    container_name: ghost_token
-    ports:
-      - "3030:3000"
-    restart: unless-stopped
-    env_file:
-      - .env
