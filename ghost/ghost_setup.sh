@@ -42,7 +42,7 @@ echo "✅ Generando docker-compose.yml"
 cat <<'EOF' > docker-compose.yml
 services:
   ghost_db:
-    image: mysql:8
+    image: mysql:5.7
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${GHOST_DB_PASSWORD}
