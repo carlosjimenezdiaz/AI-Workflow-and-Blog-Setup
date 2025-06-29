@@ -2,8 +2,8 @@ services:
   ghost-token:
     build: .
     container_name: ghost_token
-    environment:
-      - GHOST_ADMIN_API_KEY=TU_ADMIN_API_KEY_AQUI
+    env_file:
+      - .env        
     ports:
       - "3030:3000"
     restart: unless-stopped
